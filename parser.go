@@ -124,6 +124,16 @@ func ParseBeginTxn(actor *Actor, item string) BeginTxn {
 	return ret
 }
 
+func (beginTxn BeginTxn) Do() []string {
+	if beginTxn.ReadTimestamp > 0 {
+		return []string{
+			fmt.Sprintf(beginTxn.SessionName()+".beginAtTimestamp(%d);", beginTxn.ReadTimestamp),
+		}
+	}
+
+	return []string{beginTxn.SessionName() + ".begin();"}
+}
+
 type CommitTxn struct {
 	Actor
 	CommitTimestamp uint64
@@ -141,6 +151,24 @@ func ParseCommitTxn(actor *Actor, item string) CommitTxn {
 	}
 
 	return ret
+}
+
+func (commitTxn CommitTxn) Do() []string {
+	if commitTxn.CommitTimestamp > 0 {
+		return []string{
+			fmt.Sprintf("%s.commit(%d);", commitTxn.SessionName(), commitTxn.CommitTimestamp),
+		}
+	}
+
+	return []string{commitTxn.SessionName() + ".commit();"}
+}
+
+type RollbackTxn struct {
+	Actor
+}
+
+func (rollback RollbackTxn) Do() []string {
+	return []string{fmt.Sprintf("%s.rollback();", rollback.SessionName())}
 }
 
 type Write struct {
@@ -165,6 +193,19 @@ func ParseWrite(actor *Actor, item string) Write {
 	return ret
 }
 
+func (write Write) CursorName() string {
+	return fmt.Sprintf("%s_cursor", write.SessionName())
+}
+
+func (write Write) Do() []string {
+	return []string{
+		"{",
+		fmt.Sprintf("\tWtCursor %s = %s.openCursor(tableUri);", write.CursorName(), write.SessionName()),
+		fmt.Sprintf("\t%s.insert(%d, %d);", write.CursorName(), write.Key, write.Value),
+		"}",
+	}
+}
+
 type Read struct {
 	Actor
 	Key int
@@ -178,26 +219,6 @@ func ParseRead(actor *Actor, item string) Read {
 	keyChr := readRe.FindStringSubmatch(item)[1][0]
 	ret.Key = int(keyChr - byte('A'))
 	return ret
-}
-
-func (beginTxn BeginTxn) Do() []string {
-	if beginTxn.ReadTimestamp > 0 {
-		return []string{
-			fmt.Sprintf(beginTxn.SessionName()+".beginAtTimestamp(%d);", beginTxn.ReadTimestamp),
-		}
-	}
-
-	return []string{beginTxn.SessionName() + ".begin();"}
-}
-
-func (commitTxn CommitTxn) Do() []string {
-	if commitTxn.CommitTimestamp > 0 {
-		return []string{
-			fmt.Sprintf(commitTxn.SessionName()+".commit(%d);", commitTxn.CommitTimestamp),
-		}
-	}
-
-	return []string{commitTxn.SessionName() + ".commit();"}
 }
 
 func (read Read) CursorName() string {
@@ -214,17 +235,42 @@ func (read Read) Do() []string {
 
 }
 
-func (write Write) CursorName() string {
-	return fmt.Sprintf("%s_cursor", write.SessionName())
+type Timestamp struct {
+	Actor
+	Read   int
+	Commit int
 }
 
-func (write Write) Do() []string {
-	return []string{
-		"{",
-		fmt.Sprintf("\tWtCursor %s = %s.openCursor(tableUri);", write.CursorName(), write.SessionName()),
-		fmt.Sprintf("\t%s.insert(%d, %d);", write.CursorName(), write.Key, write.Value),
-		"}",
+func ParseTimestamp(actor *Actor, item string) Timestamp {
+	options := KeyValues(item)
+	ret := Timestamp{Actor: *actor}
+	var err error
+	if val, exists := options["commit"]; exists {
+		ret.Commit, err = strconv.Atoi(val)
+		if err != nil {
+			panic(err)
+		}
 	}
+	if val, exists := options["read"]; exists {
+		ret.Read, err = strconv.Atoi(val)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return ret
+}
+
+func (timestamp Timestamp) Do() []string {
+	ret := make([]string, 0)
+	if timestamp.Read > 0 {
+		ret = append(ret,
+			fmt.Sprintf("%s.readAtTimestamp(%d);", timestamp.SessionName(), timestamp.Read))
+	}
+	if timestamp.Commit > 0 {
+		ret = append(ret, fmt.Sprintf("%s.setTimestamp(%d);", timestamp.SessionName(), timestamp.Commit))
+	}
+	return ret
 }
 
 func ParseAndNormalize(line string) []string {
@@ -265,6 +311,10 @@ func ParseOp(actors []Actor, line string) Operation {
 			op = ParseWrite(&actors[idx], item)
 		case strings.HasPrefix(item, "Read"):
 			op = ParseRead(&actors[idx], item)
+		case strings.HasPrefix(item, "Timestamp"):
+			op = ParseTimestamp(&actors[idx], item)
+		case item == "Rollback":
+			op = RollbackTxn{actors[idx]}
 		default:
 			panic(fmt.Sprintf("Unknown command. Line: %s", item))
 		}
