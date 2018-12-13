@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"regexp"
@@ -276,61 +277,45 @@ func ParseOp(actors []Actor, line string) Operation {
 }
 
 func main() {
-	if true {
-		table, err := os.Open("./concurrent_ops.org")
-		if err != nil {
-			panic(err)
-		}
-		defer table.Close()
+	flag.Parse()
+	tableFilename := flag.Arg(0)
 
-		scanner := bufio.NewScanner(table)
-		if scanner.Scan() == false {
-			return
-		}
+	table, err := os.Open(tableFilename)
+	if err != nil {
+		panic(err)
+	}
+	defer table.Close()
 
-		firstLine := scanner.Text()
-		if scanner.Scan() == false {
-			return
-		}
-
-		secondLine := scanner.Text()
-		for _, chr := range secondLine {
-			if chr != '|' && chr != '-' && chr != '+' {
-				fmt.Println("Unexpected second line. Line:\n\t", secondLine)
-				return
-			}
-		}
-
-		instance := Instance{
-			TableName: "tableUri",
-			Actors:    ActorsFromLine(firstLine),
-		}
-
-		for scanner.Scan() {
-			instance.NextOp(ParseOp(instance.Actors, scanner.Text()))
-		}
-
-		if err := scanner.Err(); err != nil {
-			panic(err)
-		}
-
-		instance.Compile("wt_sequence.cpp")
+	scanner := bufio.NewScanner(table)
+	if scanner.Scan() == false {
 		return
 	}
 
-	writer := Actor{0, "Writer"}
-	reader := Actor{1, "Reader"}
+	firstLine := scanner.Text()
+	if scanner.Scan() == false {
+		return
+	}
+
+	secondLine := scanner.Text()
+	for _, chr := range secondLine {
+		if chr != '|' && chr != '-' && chr != '+' {
+			fmt.Println("Unexpected second line. Line:\n\t", secondLine)
+			return
+		}
+	}
 
 	instance := Instance{
 		TableName: "tableUri",
-		Actors:    []Actor{writer, reader},
+		Actors:    ActorsFromLine(firstLine),
 	}
-	instance.NextOp(BeginTxn{Actor: writer})
-	instance.NextOp(BeginTxn{Actor: reader})
-	instance.NextOp(Write{Actor: writer, Key: 1, Value: 1})
-	instance.NextOp(CommitTxn{Actor: writer})
-	instance.NextOp(Read{Actor: reader, Key: 1})
-	instance.NextOp(CommitTxn{Actor: reader})
+
+	for scanner.Scan() {
+		instance.NextOp(ParseOp(instance.Actors, scanner.Text()))
+	}
+
+	if err := scanner.Err(); err != nil {
+		panic(err)
+	}
 
 	instance.Compile("wt_sequence.cpp")
 }
