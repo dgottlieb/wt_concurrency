@@ -291,7 +291,7 @@ func ParseProgram(reader io.Reader) (*Instance, error) {
 	secondLine := scanner.Text()
 	for _, chr := range secondLine {
 		if chr != '|' && chr != '-' && chr != '+' {
-			return nil, fmt.Errorf("Unexpected second line. Line:\n\t", secondLine)
+			return nil, fmt.Errorf("Unexpected second line. Line: %v", secondLine)
 		}
 	}
 
