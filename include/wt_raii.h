@@ -350,7 +350,6 @@ public:
             ss << "," << config;
         }
 
-        std::cout << "SS: " << ss.str() << std::endl;
         _handler.handle_error = nullptr;
         _handler.handle_message = nullptr;
         _handler.handle_progress = nullptr;
