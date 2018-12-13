@@ -1,4 +1,4 @@
-#include "/Users/dgottlieb/xgen/wiredtiger/wiredtiger.h"
+#include "wiredtiger.h"
 
 #include <iostream>
 #include <sstream>
