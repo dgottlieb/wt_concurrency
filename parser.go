@@ -327,8 +327,11 @@ func ParseOp(actors []Actor, line string) Operation {
 
 func ParseProgram(reader io.Reader) (*Instance, error) {
 	scanner := bufio.NewScanner(reader)
-	if scanner.Scan() == false {
-		return nil, errors.New("No text in file.")
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.TrimSpace(line)[0] != '#' {
+			break
+		}
 	}
 
 	firstLine := scanner.Text()
