@@ -1,0 +1,32 @@
+# A single MongoDB crud transaction will:
+#  1) Write A
+#  2) SetTimestamp T
+#  3) Write B
+# Intending for timestamp T to apply to both A and B. Concatenating
+# two crud operations gives:
+#  1) Write A
+#  2) SetTimestamp T
+#  3) Write B
+#  4) Write C
+#  5) SetTimestamp T+1
+#  6) Write D
+# Intending for timestamp T to apply to write's A and B, and T+1
+# to apply to C and D. But is that what happens?
+#
+# It turns out the writes to B and C are visible, however A and D
+# are not.
+| Writer               | Reader           |
+|----------------------+------------------|
+| Begin                |                  |
+| Write A 1            |                  |
+| Timestamp :commit 10 |                  |
+| Write B 1            |                  |
+| Write C 1            |                  |
+| Timestamp :commit 20 |                  |
+| Write D 1            |                  |
+| Commit               |                  |
+|                      | Begin :readAt 15 |
+|                      | Read A           |
+|                      | Read B           |
+|                      | Read C           |
+|                      | Read D           |
