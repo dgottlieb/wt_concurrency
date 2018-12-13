@@ -1,0 +1,31 @@
+# Show how a single writer transaction can set a commit timestamp
+# multiple times. A reader that chooses a time which slices those
+# writes will only see the slice with the earlier value.
+| Writer               | Reader             |
+|----------------------+--------------------|
+| Begin                |                    |
+| Timestamp :commit 10 |                    |
+| Write A 1            |                    |
+| Timestamp :commit 20 |                    |
+| Write A 2            |                    |
+| Timestamp :commit 30 |                    |
+| Write A 3            |                    |
+| Commit               |                    |
+|                      | Begin              |
+|                      | Read A             |
+|                      | Rollback           |
+|                      | Begin              |
+|                      | Timestamp :read 5  |
+|                      | Read A             |
+|                      | Rollback           |
+|                      | Begin              |
+|                      | Timestamp :read 15 |
+|                      | Read A             |
+|                      | Rollback           |
+|                      | Begin              |
+|                      | Timestamp :read 25 |
+|                      | Read A             |
+|                      | Rollback           |
+|                      | Begin              |
+|                      | Timestamp :read 35 |
+|                      | Read A             |

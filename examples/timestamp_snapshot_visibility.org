@@ -1,0 +1,13 @@
+# Demonstrates that a reader with a later timestamp
+# will not see a write with an earlier timestamp
+# if the reader's transaction is assigned a timestamp
+# before the writer commits.
+| Reader             | Writer              |
+|--------------------+---------------------|
+|                    | Begin               |
+|                    | Write A 1           |
+|                    | Timestamp :commit 5 |
+| Begin              |                     |
+| Timestamp :read 10 |                     |
+|                    | Commit              |
+| Read A             |                     |

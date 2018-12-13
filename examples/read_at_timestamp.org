@@ -1,0 +1,13 @@
+# Demonstrate the basic read-at-timestamp API. Reading earlier than
+# a commit time will not see the write. Reading later will.
+| Writer                    | Reader                               |
+|---------------------------+--------------------------------------|
+| Begin :isolation snapshot |                                      |
+| Write A 1                 |                                      |
+| Commit :commitAt 15       |                                      |
+|                           | Begin :readAt 10 :isolation snapshot |
+|                           | Read A                               |
+|                           | Commit                               |
+|                           | Begin :readAt 20                     |
+|                           | Read A                               |
+|                           | Commit                               |
