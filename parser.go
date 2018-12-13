@@ -24,7 +24,7 @@ func (instance *Instance) NextOp(op Operation) {
 }
 
 func (instance *Instance) Compile(filename string) {
-	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0755)
+	file, err := os.Create(filename)
 	if err != nil {
 		panic(err)
 	}
