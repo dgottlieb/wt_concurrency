@@ -1,9 +1,10 @@
-package main
+package wt_concurrency
 
 import (
 	"bufio"
-	"flag"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 	"strconv"
@@ -276,31 +277,21 @@ func ParseOp(actors []Actor, line string) Operation {
 	return op
 }
 
-func main() {
-	flag.Parse()
-	tableFilename := flag.Arg(0)
-
-	table, err := os.Open(tableFilename)
-	if err != nil {
-		panic(err)
-	}
-	defer table.Close()
-
-	scanner := bufio.NewScanner(table)
+func ParseProgram(reader io.Reader) (*Instance, error) {
+	scanner := bufio.NewScanner(reader)
 	if scanner.Scan() == false {
-		return
+		return nil, errors.New("No text in file.")
 	}
 
 	firstLine := scanner.Text()
 	if scanner.Scan() == false {
-		return
+		return nil, errors.New("No instructions in file.")
 	}
 
 	secondLine := scanner.Text()
 	for _, chr := range secondLine {
 		if chr != '|' && chr != '-' && chr != '+' {
-			fmt.Println("Unexpected second line. Line:\n\t", secondLine)
-			return
+			return nil, fmt.Errorf("Unexpected second line. Line:\n\t", secondLine)
 		}
 	}
 
@@ -314,8 +305,8 @@ func main() {
 	}
 
 	if err := scanner.Err(); err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	instance.Compile("wt_sequence.cpp")
+	return &instance, nil
 }
