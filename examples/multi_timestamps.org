@@ -14,18 +14,22 @@
 |                      | Begin              |
 |                      | Read A             |
 |                      | Rollback           |
+|                      |                    |
 |                      | Begin              |
 |                      | Timestamp :read 5  |
 |                      | Read A             |
 |                      | Rollback           |
+|                      |                    |
 |                      | Begin              |
 |                      | Timestamp :read 15 |
 |                      | Read A             |
 |                      | Rollback           |
+|                      |                    |
 |                      | Begin              |
 |                      | Timestamp :read 25 |
 |                      | Read A             |
 |                      | Rollback           |
+|                      |                    |
 |                      | Begin              |
 |                      | Timestamp :read 35 |
 |                      | Read A             |

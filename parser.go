@@ -273,6 +273,12 @@ func (timestamp Timestamp) Do() []string {
 	return ret
 }
 
+type NoOp struct{}
+
+func (noop NoOp) Do() []string {
+	return []string{}
+}
+
 func ParseAndNormalize(line string) []string {
 	ret := make([]string, 0)
 	items := strings.Split(line, "|")
@@ -316,6 +322,10 @@ func ParseOp(actors []Actor, line string) Operation {
 		default:
 			panic(fmt.Sprintf("Unknown command. Line: %s", item))
 		}
+	}
+
+	if realOps == 0 {
+		return NoOp{}
 	}
 
 	if realOps != 1 {
