@@ -298,8 +298,6 @@ func ParseOp(actors []Actor, line string) Operation {
 			continue
 		}
 
-		fmt.Printf("%d -> `%s`\n", idx, item)
-
 		realOps++
 
 		switch {
