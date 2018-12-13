@@ -279,6 +279,129 @@ func (noop NoOp) Do() []string {
 	return []string{}
 }
 
+var TRUE bool = true
+var FALSE bool = false
+
+type Alter struct {
+	Actor
+	TableName string
+	Logging   *bool
+}
+
+func ParseAlter(instance *Instance, actor *Actor, item string) Alter {
+	options := KeyValues(item)
+	ret := Alter{Actor: *actor}
+	if val, exists := options["logging"]; exists {
+		switch val {
+		case "on":
+			ret.Logging = &TRUE
+		case "off":
+			ret.Logging = &FALSE
+		default:
+			panic(fmt.Sprintf("Unknown logging setting. Must be <on|off>. Val: %v", val))
+		}
+	}
+	if ret.TableName == "" {
+		ret.TableName = instance.TableName
+	}
+
+	return ret
+}
+
+func (alter Alter) Do() []string {
+	ret := make([]string, 0)
+	if alter.Logging != nil {
+		ret = append(ret, fmt.Sprintf("%v.alterTableLogging(%v, %v);", alter.SessionName(), alter.TableName, *alter.Logging))
+	}
+
+	return ret
+}
+
+type GlobalTimestamp struct {
+	Stable int
+	Oldest int
+	Commit int
+	Force  bool
+}
+
+func ParseGlobalTimestamp(instance *Instance, item string) GlobalTimestamp {
+	options := KeyValues(item)
+	ret := GlobalTimestamp{}
+
+	var err error
+	if val, exists := options["stable"]; exists {
+		ret.Stable, err = strconv.Atoi(val)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if val, exists := options["oldest"]; exists {
+		ret.Oldest, err = strconv.Atoi(val)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if val, exists := options["commit"]; exists {
+		ret.Commit, err = strconv.Atoi(val)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if val, exists := options["force"]; exists {
+		ret.Force, err = strconv.ParseBool(val)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return ret
+}
+
+func (global GlobalTimestamp) Do() []string {
+	ret := make([]string, 0)
+	if global.Stable > 0 {
+		ret = append(ret, fmt.Sprintf("conn.setStableTimestamp(%d);", global.Stable))
+	}
+	if global.Oldest > 0 {
+		ret = append(ret, fmt.Sprintf("conn.setOldestTimestamp(%d);", global.Oldest))
+	}
+	if global.Commit > 0 {
+		panic("Resetting the all_committed time is not yet supported.")
+	}
+	if global.Force {
+		panic("Working with force=true is not yet supported.")
+	}
+
+	return ret
+}
+
+type Checkpoint struct {
+	Actor
+	Stable bool
+}
+
+func ParseCheckpoint(actor *Actor, item string) Checkpoint {
+	options := KeyValues(item)
+	ret := Checkpoint{*actor, true} // Default stable to true.
+	var err error
+	if val, exists := options["stable"]; exists {
+		ret.Stable, err = strconv.ParseBool(val)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return ret
+}
+
+func (checkpoint Checkpoint) Do() []string {
+	if checkpoint.Stable {
+		return []string{fmt.Sprintf("%v.stableCheckpoint();", checkpoint.SessionName())}
+	} else {
+		return []string{fmt.Sprintf("%v.unstableCheckpoint();", checkpoint.SessionName())}
+	}
+}
+
 func ParseAndNormalize(line string) []string {
 	ret := make([]string, 0)
 	items := strings.Split(line, "|")
@@ -293,7 +416,7 @@ func ParseAndNormalize(line string) []string {
 	return ret
 }
 
-func ParseOp(actors []Actor, line string) Operation {
+func ParseOp(instance *Instance, actors []Actor, line string) Operation {
 	items := ParseAndNormalize(line)
 
 	realOps := 0
@@ -319,6 +442,12 @@ func ParseOp(actors []Actor, line string) Operation {
 			op = ParseTimestamp(&actors[idx], item)
 		case item == "Rollback":
 			op = RollbackTxn{actors[idx]}
+		case strings.HasPrefix(item, "Alter"):
+			op = ParseAlter(instance, &actors[idx], item)
+		case strings.HasPrefix(item, "GlobalTimestamp"):
+			op = ParseGlobalTimestamp(instance, item)
+		case strings.HasPrefix(item, "Checkpoint"):
+			op = ParseCheckpoint(&actors[idx], item)
 		default:
 			panic(fmt.Sprintf("Unknown command. Line: %s", item))
 		}
@@ -362,7 +491,7 @@ func ParseProgram(reader io.Reader) (*Instance, error) {
 	}
 
 	for scanner.Scan() {
-		instance.NextOp(ParseOp(instance.Actors, scanner.Text()))
+		instance.NextOp(ParseOp(&instance, instance.Actors, scanner.Text()))
 	}
 
 	if err := scanner.Err(); err != nil {

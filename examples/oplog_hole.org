@@ -1,0 +1,20 @@
+# Demonstrate an awkward state if the stable timestamp is allowed
+# to go ahead of the "all committed" value. Note that the table
+# receiving writes is logged by WiredTiger.
+| Actor A             | Actor B                   | Checkpoint              | System |
+|---------------------+---------------------------+-------------------------+--------|
+| Alter :logging on   |                           |                         |        |
+| Begin               |                           |                         |        |
+| Write A 1           |                           |                         |        |
+| Timestamp :commit 1 |                           |                         |        |
+|                     | Begin                     |                         |        |
+|                     | Write B 1                 |                         |        |
+|                     | Timestamp :commit 2       |                         |        |
+|                     | Commit                    |                         |        |
+|                     | GlobalTimestamp :stable 2 |                         |        |
+|                     |                           | Checkpoint :stable true |        |
+| Commit              |                           |                         |        |
+|                     |                           |                         | Crash  |
+| Begin               |                           |                         |        |
+| Read A              |                           |                         |        |
+| Read B              |                           |                         |        |
