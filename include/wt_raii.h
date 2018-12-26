@@ -135,7 +135,7 @@ public:
         setKey(key);
         int err = _cursor->search(_cursor);
         if (err == WT_NOTFOUND) {
-            std::cout << "\tKey not found, returning -1. Key: " << key << std::endl;
+            // std::cout << "\tKey not found, returning -1. Key: " << key << std::endl;
             return -1;
         }
         invariantWTOK(_cursor->session, err);
@@ -247,8 +247,7 @@ public:
                                   sizeof(readTSConfigString),
                                   "read_timestamp=%llx,round_to_oldest=false",
                                   static_cast<unsigned long long>(timestamp));
-        invariantWTOK(_session, _session->timestamp_transaction(_session, readTSConfigString));
-        return 0;
+        return _session->timestamp_transaction(_session, readTSConfigString);
     }
 
     int beginAtTimestamp(std::uint64_t timestamp) {
@@ -363,7 +362,7 @@ public:
 
     ~WtConn() {
         if (_stableCheckpointOnClose) {
-            std::cout << "Using timestamps on close." << std::endl;
+            // std::cout << "Using timestamps on close." << std::endl;
             if (_conn->close(_conn, "use_timestamp=true")) {
                 // throw "wiredtiger_close failed";
             }
@@ -472,14 +471,17 @@ private:
 void invariantFailedWithLines(int ret, const char* file, unsigned line) {
     std::cout << file << ':' << line << ": Error: " << ret
               << " Message: " << wiredtiger_strerror(ret) << std::endl;
+    exit(0);
 }
 
 void invariantFailedWithLines(WT_SESSION* session, int ret, const char* file, unsigned line) {
     std::cout << file << ':' << line << ": Error: " << ret
               << " Message: " << session->strerror(session, ret) << std::endl;
+    exit(0);
 }
 
 void invariantFailedWithLines(WtSession& session, int ret, const char* file, unsigned line) {
     std::cout << file << ':' << line << ": Error: " << ret
               << " Message: " << session->strerror(session.get(), ret) << std::endl;
+    exit(0);
 }

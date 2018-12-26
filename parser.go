@@ -16,11 +16,21 @@ type Program []Instance
 type Instance struct {
 	TableName string
 	Actors    []Actor
-	Sequence  []Operation
+	Sequence  []*WrappedOp
 }
 
-func (instance *Instance) NextOp(op Operation) {
+func (instance *Instance) NextOp(op *WrappedOp) {
 	instance.Sequence = append(instance.Sequence, op)
+}
+
+func contains(canError []int, stmtIdx int) bool {
+	for _, idx := range canError {
+		if idx == stmtIdx {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (instance *Instance) Compile(filename string) {
@@ -47,14 +57,29 @@ func (instance *Instance) Compile(filename string) {
 	fmt.Fprintln(file, "\tadmin.alterTableLogging(tableUri, false);")
 	fmt.Fprintln(file)
 
+	fmt.Fprintf(file, "\tstd::cout << \"Actors: %v\" << std::endl;\n", len(instance.Actors))
 	for _, actor := range instance.Actors {
 		fmt.Fprintf(file, "\tWtSession %s = conn.getSession();\n", actor.SessionName())
+		fmt.Fprintf(file, "\tstd::cout << \"%v\" << std::endl;\n", actor.Name)
 	}
 	fmt.Fprintln(file)
 
 	for idx, _ := range instance.Sequence {
-		for _, line := range instance.Sequence[idx].Do() {
+		row := instance.Sequence[idx]
+		fmt.Fprintf(file, "\tstd::cout << \"Line: %v\" << std::endl;\n", row.Raw)
+		fmt.Fprintf(file, "\tstd::cout << \"Idx: %v\" << std::endl;\n", row.ActorIdx)
+		fmt.Fprintf(file, "\tstd::cout << \"HasOutput: %v\" << std::endl;\n", row.HasOutput)
+		canError := row.CanError()
+		for stmtIdx, line := range row.Do() {
+			if contains(canError, stmtIdx) {
+				fmt.Fprintf(file, "\t// canError\n")
+				fmt.Fprintf(file, "\t{\n\t\tint errorCode =\n\t\t")
+			}
 			fmt.Fprintf(file, "\t%s\n", line)
+			if contains(canError, stmtIdx) {
+				fmt.Fprintf(file, "\t\tif (errorCode == 0) { } else { std::cout << \"Error: \" << errorCode << \" Str: \" << wiredtiger_strerror(errorCode) << std::endl; }\n")
+				fmt.Fprintf(file, "\t}\n")
+			}
 		}
 	}
 	fmt.Fprintln(file, "}")
@@ -73,11 +98,12 @@ func ActorsFromLine(line string) []Actor {
 	ret := make([]Actor, 0)
 	actorId := 0
 	for _, item := range strings.Split(line, "|") {
-		if strings.TrimSpace(item) == "" {
+		trimmed := strings.TrimSpace(item)
+		if trimmed == "" {
 			continue
 		}
 
-		ret = append(ret, Actor{actorId, item})
+		ret = append(ret, Actor{actorId, trimmed})
 		actorId++
 	}
 
@@ -86,6 +112,14 @@ func ActorsFromLine(line string) []Actor {
 
 type Operation interface {
 	Do() []string
+	CanError() []int
+}
+
+type WrappedOp struct {
+	Operation
+	Raw       string
+	ActorIdx  int
+	HasOutput bool
 }
 
 var kvRe = regexp.MustCompile(":(\\w+) (\\w+)")
@@ -134,6 +168,10 @@ func (beginTxn BeginTxn) Do() []string {
 	return []string{beginTxn.SessionName() + ".begin();"}
 }
 
+func (beginTxn BeginTxn) CanError() []int {
+	return []int{0}
+}
+
 type CommitTxn struct {
 	Actor
 	CommitTimestamp uint64
@@ -163,12 +201,20 @@ func (commitTxn CommitTxn) Do() []string {
 	return []string{commitTxn.SessionName() + ".commit();"}
 }
 
+func (commitTxn CommitTxn) CanError() []int {
+	return []int{0}
+}
+
 type RollbackTxn struct {
 	Actor
 }
 
 func (rollback RollbackTxn) Do() []string {
 	return []string{fmt.Sprintf("%s.rollback();", rollback.SessionName())}
+}
+
+func (rollback RollbackTxn) CanError() []int {
+	return []int{0}
 }
 
 type Write struct {
@@ -206,6 +252,10 @@ func (write Write) Do() []string {
 	}
 }
 
+func (write Write) CanError() []int {
+	return []int{2}
+}
+
 type Read struct {
 	Actor
 	Key int
@@ -232,7 +282,10 @@ func (read Read) Do() []string {
 		fmt.Sprintf("\tstd::cout << \"Val: \" << %s.searchExact(%d) << std::endl;", read.CursorName(), read.Key),
 		"}",
 	}
+}
 
+func (read Read) CanError() []int {
+	return []int{}
 }
 
 type Timestamp struct {
@@ -273,10 +326,22 @@ func (timestamp Timestamp) Do() []string {
 	return ret
 }
 
+func (timestamp Timestamp) CanError() []int {
+	ret := make([]int, 0)
+	for idx, _ := range timestamp.Do() {
+		ret = append(ret, idx)
+	}
+	return ret
+}
+
 type NoOp struct{}
 
 func (noop NoOp) Do() []string {
 	return []string{}
+}
+
+func (noop NoOp) CanError() []int {
+	return []int{}
 }
 
 var TRUE bool = true
@@ -315,6 +380,10 @@ func (alter Alter) Do() []string {
 	}
 
 	return ret
+}
+
+func (alter Alter) CanError() []int {
+	return []int{0}
 }
 
 type GlobalTimestamp struct {
@@ -375,6 +444,15 @@ func (global GlobalTimestamp) Do() []string {
 	return ret
 }
 
+func (global GlobalTimestamp) CanError() []int {
+	ret := make([]int, 0)
+	for idx, _ := range global.Do() {
+		ret = append(ret, idx)
+	}
+
+	return ret
+}
+
 type Checkpoint struct {
 	Actor
 	Stable bool
@@ -402,6 +480,10 @@ func (checkpoint Checkpoint) Do() []string {
 	}
 }
 
+func (checkpoint Checkpoint) CanError() []int {
+	return []int{0}
+}
+
 func ParseAndNormalize(line string) []string {
 	ret := make([]string, 0)
 	items := strings.Split(line, "|")
@@ -416,17 +498,22 @@ func ParseAndNormalize(line string) []string {
 	return ret
 }
 
-func ParseOp(instance *Instance, actors []Actor, line string) Operation {
+func ParseOp(instance *Instance, actors []Actor, line string) *WrappedOp {
 	items := ParseAndNormalize(line)
 
 	realOps := 0
 	var op Operation
+	var actorIdx int
+	var hasOutput bool = false
+	var raw string
 	for idx, item := range items {
 		item = strings.TrimSpace(item)
 		if len(item) == 0 {
 			continue
 		}
 
+		actorIdx = idx
+		raw = item
 		realOps++
 
 		switch {
@@ -438,6 +525,7 @@ func ParseOp(instance *Instance, actors []Actor, line string) Operation {
 			op = ParseWrite(&actors[idx], item)
 		case strings.HasPrefix(item, "Read"):
 			op = ParseRead(&actors[idx], item)
+			hasOutput = true
 		case strings.HasPrefix(item, "Timestamp"):
 			op = ParseTimestamp(&actors[idx], item)
 		case item == "Rollback":
@@ -454,14 +542,14 @@ func ParseOp(instance *Instance, actors []Actor, line string) Operation {
 	}
 
 	if realOps == 0 {
-		return NoOp{}
+		return &WrappedOp{NoOp{}, line, -1, false}
 	}
 
 	if realOps != 1 {
 		panic(fmt.Sprintf("Expected exactly one op. Num: %d Line: %s", realOps, line))
 	}
 
-	return op
+	return &WrappedOp{op, raw, actorIdx, hasOutput}
 }
 
 func ParseProgram(reader io.Reader) (*Instance, error) {
