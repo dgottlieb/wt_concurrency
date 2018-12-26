@@ -13,8 +13,8 @@
 # Intending for timestamp T to apply to write's A and B, and T+1
 # to apply to C and D. But is that what happens?
 #
-# It turns out the writes to B and C are visible, however A and D
-# are not.
+# It turns out the writes to B and C are visible at T, however A
+# and D are not.
 | Writer               | Reader           |
 |----------------------+------------------|
 | Begin                |                  |
