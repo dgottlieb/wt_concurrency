@@ -138,6 +138,7 @@ type BeginTxn struct {
 	Actor
 	ReadTimestamp uint64
 	Isolation     string
+	IgnorePrepare bool
 }
 
 func ParseBeginTxn(actor *Actor, item string) BeginTxn {
@@ -147,9 +148,16 @@ func ParseBeginTxn(actor *Actor, item string) BeginTxn {
 		ret.Isolation = value
 	}
 
+	var err error
 	if value, exists := options["readAt"]; exists {
-		var err error
 		ret.ReadTimestamp, err = strconv.ParseUint(value, 10, 64)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if value, exists := options["ignorePrepare"]; exists {
+		ret.IgnorePrepare, err = strconv.ParseBool(value)
 		if err != nil {
 			panic(err)
 		}
@@ -159,10 +167,18 @@ func ParseBeginTxn(actor *Actor, item string) BeginTxn {
 }
 
 func (beginTxn BeginTxn) Do() []string {
+	if beginTxn.ReadTimestamp > 0 && beginTxn.IgnorePrepare {
+		panic("Does not support beginning with a read timestamp and ignore prepared because I can't be bothered to implement it atm.")
+	}
+
 	if beginTxn.ReadTimestamp > 0 {
 		return []string{
 			fmt.Sprintf(beginTxn.SessionName()+".beginAtTimestamp(%d);", beginTxn.ReadTimestamp),
 		}
+	}
+
+	if beginTxn.IgnorePrepare {
+		return []string{fmt.Sprintf(beginTxn.SessionName()+".begin(%v);", beginTxn.IgnorePrepare)}
 	}
 
 	return []string{beginTxn.SessionName() + ".begin();"}
@@ -474,13 +490,42 @@ func ParseCheckpoint(actor *Actor, item string) Checkpoint {
 
 func (checkpoint Checkpoint) Do() []string {
 	if checkpoint.Stable {
-		return []string{fmt.Sprintf("%v.stableCheckpoint();", checkpoint.SessionName())}
+		return []string{"conn.stableCheckpoint();"}
 	} else {
-		return []string{fmt.Sprintf("%v.unstableCheckpoint();", checkpoint.SessionName())}
+		return []string{"conn.unstableCheckpoint();"}
 	}
 }
 
 func (checkpoint Checkpoint) CanError() []int {
+	return []int{0}
+}
+
+type PrepareTxn struct {
+	Actor
+	PrepareTimestamp int
+}
+
+var prepareRe = regexp.MustCompile("Prepare (\\d+)")
+
+func ParsePrepare(actor *Actor, item string) PrepareTxn {
+	ret := PrepareTxn{Actor: *actor}
+	matches := prepareRe.FindStringSubmatch(item)
+
+	var err error
+	ret.PrepareTimestamp, err = strconv.Atoi(matches[1])
+	if err != nil {
+		panic(err)
+	}
+	return ret
+}
+
+func (prepare PrepareTxn) Do() []string {
+	ret := make([]string, 0)
+	ret = append(ret, fmt.Sprintf("%s.prepare(%d);", prepare.SessionName(), prepare.PrepareTimestamp))
+	return ret
+}
+
+func (prepare PrepareTxn) CanError() []int {
 	return []int{0}
 }
 
@@ -536,6 +581,8 @@ func ParseOp(instance *Instance, actors []Actor, line string) *WrappedOp {
 			op = ParseGlobalTimestamp(instance, item)
 		case strings.HasPrefix(item, "Checkpoint"):
 			op = ParseCheckpoint(&actors[idx], item)
+		case strings.HasPrefix(item, "Prepare"):
+			op = ParsePrepare(&actors[idx], item)
 		default:
 			panic(fmt.Sprintf("Unknown command. Line: %s", item))
 		}

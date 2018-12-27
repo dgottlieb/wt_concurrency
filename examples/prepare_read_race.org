@@ -1,0 +1,8 @@
+| Preparer   | Reader                                        |
+|------------+-----------------------------------------------|
+| Begin      |                                               |
+| Write A 2  |                                               |
+|            | Begin :isolation snapshot :ignorePrepare true |
+|            | Timestamp :read 20                            |
+| Prepare 10 |                                               |
+|            | Read A                                        |

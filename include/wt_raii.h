@@ -261,8 +261,12 @@ public:
         return 0;
     }
 
-    int begin() {
-        return _session->begin_transaction(_session, nullptr);
+    int begin(bool ignorePrepare = false) {
+        if (ignorePrepare) {
+            return _session->begin_transaction(_session, "ignore_prepare=true");
+        } else {
+            return _session->begin_transaction(_session, nullptr);
+        }
     }
 
     int rollback() {
@@ -284,7 +288,9 @@ public:
         std::stringstream ss;
         ss << "prepare_timestamp=" << std::hex << time;
         const std::string conf = ss.str();
-        return _session->prepare_transaction(_session, conf.c_str());
+        int ret = _session->prepare_transaction(_session, conf.c_str());
+        std::cout << "PrepRet: " << ret << std::endl;
+        return ret;
     }
 
     int setTimestamp(int time) {

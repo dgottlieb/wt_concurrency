@@ -22,7 +22,7 @@ import (
 var lineRe = regexp.MustCompile("Line: (.+)")
 var actorIdxRe = regexp.MustCompile("Idx: (\\d+)")
 var hasOutputRe = regexp.MustCompile("HasOutput: (.+)")
-var valRe = regexp.MustCompile("Val: (\\d+)")
+var valRe = regexp.MustCompile("Val: (-?\\d+)")
 var errorRe = regexp.MustCompile("Error: (\\d+) Str: (.+)")
 var numActorsRe = regexp.MustCompile("Actors: (\\d+)")
 var wtErrStrRe = regexp.MustCompile("\\[1\\d{9}:\\d{6}.*?(WT_.*)")
@@ -181,6 +181,7 @@ func ParseOutput(reader io.Reader) error {
 		}
 	}
 
+	table.Recombined = append(table.Recombined, recombined)
 	table.Output()
 	return nil
 }
