@@ -44,6 +44,7 @@ func (instance *Instance) Compile(filename string) {
 	fmt.Fprintln(file)
 
 	fmt.Fprintln(file, "int main() {")
+	fmt.Fprintln(file, "\tsystem(\"mkdir -p ./WT_HOME/journal/\");")
 	fmt.Fprintln(file, "\tsystem(\"rm -rf ./WT_HOME/journal/*\");")
 	fmt.Fprintln(file, "\tsystem(\"rm ./WT_HOME/*\");")
 	fmt.Fprintln(file)
