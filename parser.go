@@ -196,7 +196,7 @@ type CommitTxn struct {
 func ParseCommitTxn(actor *Actor, item string) CommitTxn {
 	options := KeyValues(item)
 	ret := CommitTxn{Actor: *actor}
-	if value, exists := options["commitAt"]; exists {
+	if value, exists := options["commit"]; exists {
 		var err error
 		ret.CommitTimestamp, err = strconv.ParseUint(value, 10, 64)
 		if err != nil {

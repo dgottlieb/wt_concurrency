@@ -4,7 +4,7 @@
 |---------------------------+--------------------------------------|
 | Begin :isolation snapshot |                                      |
 | Write A 1                 |                                      |
-| Commit :commitAt 15       |                                      |
+| Commit :commit 15         |                                      |
 |                           | Begin :readAt 10 :isolation snapshot |
 |                           | Read A                               |
 |                           | Commit                               |
