@@ -30,6 +30,7 @@ var wtErrStrRe = regexp.MustCompile("\\[1\\d{9}:\\d{6}.*?(WT_.*)")
 type Table struct {
 	Actors     []string
 	Recombined []*Recombined
+	Footnotes  []string
 }
 
 func max(a, b int) int {
@@ -58,11 +59,8 @@ func (table *Table) Output() {
 		case recombined.errCode != 0 && recombined.wtErrStr == "":
 			act = fmt.Sprintf("%v (%v %v)", recombined.line, recombined.errCode, recombined.errStr)
 		case recombined.errCode != 0 && recombined.wtErrStr != "":
-			// Omit the full WT error string until we have a better way to fill in the
-			// output row.
-			// act = fmt.Sprintf("%v (%v %v %v)", recombined.line, recombined.errCode, recombined.errStr, recombined.wtErrStr)
-
-			act = fmt.Sprintf("%v (%v %v)", recombined.line, recombined.errCode, recombined.errStr)
+			act = fmt.Sprintf("%v (%v %v) [%d]", recombined.line, recombined.errCode, recombined.errStr, len(table.Footnotes)+1)
+			table.Footnotes = append(table.Footnotes, recombined.wtErrStr)
 		default:
 			panic(fmt.Sprintf("Unknown case. Rec: %+v", *recombined))
 		}
@@ -96,6 +94,15 @@ func (table *Table) Output() {
 		acts[recombined.actorIdx] = recombined.unpaddedAct
 		padArray(acts, maxColSize)
 		fmt.Printf("|%s|\n", strings.Join(acts, "|"))
+	}
+
+	if len(table.Footnotes) == 0 {
+		return
+	}
+
+	fmt.Println("\nFootnotes:")
+	for idx, footnote := range table.Footnotes {
+		fmt.Printf("  [%d] %v\n", idx+1, footnote)
 	}
 }
 
