@@ -67,7 +67,6 @@ func (table *Table) Output() {
 			panic(fmt.Sprintf("Unknown case. Rec: %+v", *recombined))
 		}
 
-		act = fmt.Sprintf(" %v ", act)
 		if recombined.actorIdx > -1 {
 			maxColSize[recombined.actorIdx] = max(maxColSize[recombined.actorIdx], len(act))
 		} else {
@@ -77,10 +76,12 @@ func (table *Table) Output() {
 	}
 
 	padArray(table.Actors, maxColSize)
-	fmt.Printf("|%s|\n", strings.Join(table.Actors, " | "))
+	fmt.Printf("|%s|\n", strings.Join(table.Actors, "|"))
 	underRow := make([]string, len(table.Actors))
 	for idx, _ := range table.Actors {
-		underRow[idx] = strings.Repeat("-", maxColSize[idx]+1)
+		// All columns are padding on the left and right by one space.
+		const padding = 2
+		underRow[idx] = strings.Repeat("-", maxColSize[idx]+2)
 	}
 	fmt.Printf("|%s|\n", strings.Join(underRow, "+"))
 
@@ -88,28 +89,24 @@ func (table *Table) Output() {
 		acts := make([]string, len(table.Actors))
 		if recombined.actorIdx == -1 {
 			padArray(acts, maxColSize)
-			fmt.Printf("|%s|\n", strings.Join(acts, " | "))
+			fmt.Printf("|%s|\n", strings.Join(acts, "|"))
 			continue
 		}
 
 		acts[recombined.actorIdx] = recombined.unpaddedAct
 		padArray(acts, maxColSize)
-		fmt.Printf("|%s|\n", strings.Join(acts, " | "))
+		fmt.Printf("|%s|\n", strings.Join(acts, "|"))
 	}
 }
 
 func pad(act string, colSize int) string {
 	spacesToAdd := colSize - len(act)
-	if spacesToAdd%2 == 0 {
-		return fmt.Sprintf("%v%v%v", strings.Repeat(" ", spacesToAdd/2), act, strings.Repeat(" ", spacesToAdd/2))
-	} else {
-		return fmt.Sprintf("%v%v%v", strings.Repeat(" ", spacesToAdd/2), act, strings.Repeat(" ", (spacesToAdd/2)+1))
-	}
+	return fmt.Sprintf(" %v%v", act, strings.Repeat(" ", spacesToAdd))
 }
 
 func padArray(acts []string, maxColSize []int) {
 	for idx, act := range acts {
-		acts[idx] = pad(act, maxColSize[idx])
+		acts[idx] = pad(act, maxColSize[idx]+1)
 	}
 }
 
