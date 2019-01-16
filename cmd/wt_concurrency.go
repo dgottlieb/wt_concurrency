@@ -63,6 +63,9 @@ func main() {
 	defer os.Remove("./artifacts/a.out")
 
 	programProcess := exec.Command("./artifacts/a.out")
+	if wiredtigerLib != nil {
+		programProcess.Env = append(programProcess.Env, fmt.Sprintf("LD_LIBRARY_PATH=%v", *wiredtigerLib))
+	}
 	tableBytes, err := programProcess.CombinedOutput()
 	if err != nil {
 		fmt.Println(string(tableBytes))
