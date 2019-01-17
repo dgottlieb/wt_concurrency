@@ -40,7 +40,7 @@ func (instance *Instance) Compile(filename string) {
 	}
 	defer file.Close()
 
-	fmt.Fprintln(file, "#include \"include/wt_raii.h\"")
+	fmt.Fprintln(file, string(MustAsset("include/wt_raii.h")))
 	fmt.Fprintln(file)
 
 	fmt.Fprintln(file, "int main() {")
