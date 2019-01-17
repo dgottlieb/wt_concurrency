@@ -24,7 +24,7 @@ func main() {
 	}
 	defer inputTable.Close()
 
-	if err := os.MkdirAll("./artifacts/", 0644); err != nil {
+	if err := os.MkdirAll("./artifacts/", 0775); err != nil {
 		panic(err)
 	}
 
