@@ -1,0 +1,14 @@
+| Preparer          | Updater                   | Reader |
+|-------------------+---------------------------+--------|
+| Begin             |                           |        |
+| Timestamp :read 5 |                           |        |
+| Write A 10        |                           |        |
+| Prepare 10        |                           |        |
+|                   | Begin :ignorePrepare true |        |
+|                   | Read A                    |        |
+| Commit :commit 12 |                           |        |
+|                   | Read A                    |        |
+|                   | Write A 20                |        |
+|                   | Commit :commit 20         |        |
+|                   |                           | Begin  |
+|                   |                           | Read A |

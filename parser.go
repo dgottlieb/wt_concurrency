@@ -77,7 +77,7 @@ func (instance *Instance) Compile(filename string) {
 				fmt.Fprintf(file, "\t// canError, hasOutput\n")
 				fmt.Fprintf(file, "\t{\n\t\tint ret =\n\t\t")
 				fmt.Fprintf(file, "\t%s\n", line)
-				fmt.Fprintf(file, "\t\tif (ret == 0) { std::cout << \"Val: \" << ret << std::endl; } else { std::cout << \"Error: \" << ret << \" Str: \" << wiredtiger_strerror(ret) << std::endl; }\n")
+				fmt.Fprintf(file, "\t\tif (ret >= -1) { std::cout << \"Val: \" << ret << std::endl; } else { std::cout << \"Error: \" << ret << \" Str: \" << wiredtiger_strerror(ret) << std::endl; }\n")
 				fmt.Fprintf(file, "\t}\n")
 			case contains(canError, stmtIdx):
 				fmt.Fprintf(file, "\t// canError\n")
