@@ -19,11 +19,13 @@ import (
 //  		if (errorCode == 0) { } else { std::cout << "Error: " << errorCode << " Str: " << wiredtiger_strerror(errorCode) << std::endl; }
 //  	}
 
+// Error: -31808 Str: WT_PREPARE_CONFLICT: conflict with a prepared update
+
 var lineRe = regexp.MustCompile("Line: (.+)")
 var actorIdxRe = regexp.MustCompile("Idx: (\\d+)")
 var hasOutputRe = regexp.MustCompile("HasOutput: (.+)")
 var valRe = regexp.MustCompile("Val: (-?\\d+)")
-var errorRe = regexp.MustCompile("Error: (\\d+) Str: (.+)")
+var errorRe = regexp.MustCompile("Error: (-?\\d+) Str: (WT[_[A-Z]+): (.+)")
 var numActorsRe = regexp.MustCompile("Actors: (\\d+)")
 var wtErrStrRe = regexp.MustCompile("\\[1\\d{9}:\\d{6}.*?(WT_.*)")
 
@@ -56,9 +58,7 @@ func (table *Table) Output() {
 			act = fmt.Sprintf("%v (WT_NOTFOUND)", recombined.line)
 		case recombined.errCode == 0 && recombined.val >= 0:
 			act = fmt.Sprintf("%v (%v)", recombined.line, recombined.val)
-		case recombined.errCode != 0 && recombined.wtErrStr == "":
-			act = fmt.Sprintf("%v (%v %v)", recombined.line, recombined.errCode, recombined.errStr)
-		case recombined.errCode != 0 && recombined.wtErrStr != "":
+		case recombined.errCode != 0:
 			act = fmt.Sprintf("%v (%v %v) [%d]", recombined.line, recombined.errCode, recombined.errStr, len(table.Footnotes)+1)
 			table.Footnotes = append(table.Footnotes, recombined.wtErrStr)
 		default:
@@ -166,6 +166,7 @@ func ParseOutput(reader io.Reader) error {
 				panic(err)
 			}
 			recombined.errStr = matches[2]
+			recombined.wtErrStr = matches[3]
 		} else if matches := numActorsRe.FindStringSubmatch(line); len(matches) > 0 {
 			var numActors int
 			numActors, err = strconv.Atoi(matches[1])

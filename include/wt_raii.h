@@ -138,7 +138,6 @@ public:
             // std::cout << "\tKey not found, returning -1. Key: " << key << std::endl;
             return -1;
         }
-        invariantWTOK(_cursor->session, err);
         if (err) {
             return err;
         }

@@ -44,9 +44,8 @@ func (instance *Instance) Compile(filename string) {
 	fmt.Fprintln(file)
 
 	fmt.Fprintln(file, "int main() {")
-	fmt.Fprintln(file, "\tsystem(\"mkdir -p ./WT_HOME/journal/\");")
-	fmt.Fprintln(file, "\tsystem(\"rm -rf ./WT_HOME/journal/*\");")
 	fmt.Fprintln(file, "\tsystem(\"rm ./WT_HOME/*\");")
+	fmt.Fprintln(file, "\tsystem(\"mkdir -p ./WT_HOME/journal/\");")
 	fmt.Fprintln(file)
 
 	fmt.Fprintf(file, "\tconst std::string tableUri = \"table:%s\";\n", instance.TableName)
@@ -62,6 +61,7 @@ func (instance *Instance) Compile(filename string) {
 	for _, actor := range instance.Actors {
 		fmt.Fprintf(file, "\tWtSession %s = conn.getSession();\n", actor.SessionName())
 		fmt.Fprintf(file, "\tstd::cout << \"%v\" << std::endl;\n", actor.Name)
+		fmt.Fprintf(file, "\tWtCursor %s = %s.openCursor(tableUri);", actor.CursorName(), actor.SessionName())
 	}
 	fmt.Fprintln(file)
 
@@ -72,14 +72,21 @@ func (instance *Instance) Compile(filename string) {
 		fmt.Fprintf(file, "\tstd::cout << \"HasOutput: %v\" << std::endl;\n", row.HasOutput)
 		canError := row.CanError()
 		for stmtIdx, line := range row.Do() {
-			if contains(canError, stmtIdx) {
+			switch {
+			case contains(canError, stmtIdx) && row.HasOutput:
+				fmt.Fprintf(file, "\t// canError, hasOutput\n")
+				fmt.Fprintf(file, "\t{\n\t\tint ret =\n\t\t")
+				fmt.Fprintf(file, "\t%s\n", line)
+				fmt.Fprintf(file, "\t\tif (ret == 0) { std::cout << \"Val: \" << ret << std::endl; } else { std::cout << \"Error: \" << ret << \" Str: \" << wiredtiger_strerror(ret) << std::endl; }\n")
+				fmt.Fprintf(file, "\t}\n")
+			case contains(canError, stmtIdx):
 				fmt.Fprintf(file, "\t// canError\n")
 				fmt.Fprintf(file, "\t{\n\t\tint errorCode =\n\t\t")
-			}
-			fmt.Fprintf(file, "\t%s\n", line)
-			if contains(canError, stmtIdx) {
+				fmt.Fprintf(file, "\t%s\n", line)
 				fmt.Fprintf(file, "\t\tif (errorCode == 0) { } else { std::cout << \"Error: \" << errorCode << \" Str: \" << wiredtiger_strerror(errorCode) << std::endl; }\n")
 				fmt.Fprintf(file, "\t}\n")
+			default:
+				fmt.Fprintf(file, "\t%s\n", line)
 			}
 		}
 	}
@@ -93,6 +100,10 @@ type Actor struct {
 
 func (actor Actor) SessionName() string {
 	return fmt.Sprintf("session_%d", actor.ColumnId)
+}
+
+func (actor Actor) CursorName() string {
+	return fmt.Sprintf("session_%d_cursor", actor.ColumnId)
 }
 
 func ActorsFromLine(line string) []Actor {
@@ -256,21 +267,14 @@ func ParseWrite(actor *Actor, item string) Write {
 	return ret
 }
 
-func (write Write) CursorName() string {
-	return fmt.Sprintf("%s_cursor", write.SessionName())
-}
-
 func (write Write) Do() []string {
 	return []string{
-		"{",
-		fmt.Sprintf("\tWtCursor %s = %s.openCursor(tableUri);", write.CursorName(), write.SessionName()),
 		fmt.Sprintf("\t%s.insert(%d, %d);", write.CursorName(), write.Key, write.Value),
-		"}",
 	}
 }
 
 func (write Write) CanError() []int {
-	return []int{2}
+	return []int{0}
 }
 
 type Read struct {
@@ -294,15 +298,12 @@ func (read Read) CursorName() string {
 
 func (read Read) Do() []string {
 	return []string{
-		"{",
-		fmt.Sprintf("\tWtCursor %s = %s.openCursor(tableUri);", read.CursorName(), read.SessionName()),
-		fmt.Sprintf("\tstd::cout << \"Val: \" << %s.searchExact(%d) << std::endl;", read.CursorName(), read.Key),
-		"}",
+		fmt.Sprintf("\t%s.searchExact(%d);", read.CursorName(), read.Key),
 	}
 }
 
 func (read Read) CanError() []int {
-	return []int{}
+	return []int{0}
 }
 
 type Timestamp struct {
