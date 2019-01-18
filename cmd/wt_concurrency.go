@@ -14,6 +14,7 @@ func main() {
 	compiler := flag.String("compiler", "clang++", "A C++14 compatible binary to use for compiling.")
 	wiredtigerHeader := flag.String("include", "./", "The directory `wiredtiger.h` can be found.")
 	wiredtigerLib := flag.String("lib", "./", "The directory where WiredTiger libraries are installed.")
+	debug := flag.Bool("debug", false, "Run in debug mode. Does not delete artifacts.")
 
 	flag.Parse()
 	tableFilename := flag.Arg(0)
@@ -35,7 +36,9 @@ func main() {
 
 	sequenceProgramFilename := "./artifacts/wt_sequence.cpp"
 	program.Compile(sequenceProgramFilename)
-	defer os.Remove(sequenceProgramFilename)
+	if *debug == false {
+		defer os.Remove(sequenceProgramFilename)
+	}
 
 	cmd := exec.Command(
 		*compiler,
@@ -53,14 +56,16 @@ func main() {
 	)
 	errorOutput, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println(
-			"Compilation failed.\nCmd:\n%v\n%v",
+		fmt.Printf(
+			"Compilation failed.\nCmd:\n%v\n%v\n",
 			strings.Join(cmd.Args, " "),
 			string(errorOutput),
 		)
 		os.Exit(1)
 	}
-	defer os.Remove("./artifacts/a.out")
+	if *debug == false {
+		defer os.Remove("./artifacts/a.out")
+	}
 
 	programProcess := exec.Command("./artifacts/a.out")
 	if wiredtigerLib != nil {
@@ -77,7 +82,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer os.Remove(sequenceOutputFilename)
+	if *debug == false {
+		defer os.Remove(sequenceOutputFilename)
+	}
 
 	sequenceOutput, err := os.Open(sequenceOutputFilename)
 	if err != nil {
