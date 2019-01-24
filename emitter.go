@@ -19,15 +19,16 @@ import (
 //  		if (errorCode == 0) { } else { std::cout << "Error: " << errorCode << " Str: " << wiredtiger_strerror(errorCode) << std::endl; }
 //  	}
 
-// Error: -31808 Str: WT_PREPARE_CONFLICT: conflict with a prepared update
-
 var lineRe = regexp.MustCompile("Line: (.+)")
 var actorIdxRe = regexp.MustCompile("Idx: (\\d+)")
 var hasOutputRe = regexp.MustCompile("HasOutput: (.+)")
 var valRe = regexp.MustCompile("Val: (-?\\d+)")
-var errorRe = regexp.MustCompile("Error: (-?\\d+) Str: (WT[_[A-Z]+): (.+)")
+
+// Error: -31808 Str: WT_PREPARE_CONFLICT: conflict with a prepared update
+// Error: 22 Str: Invalid argument
+var errorRe = regexp.MustCompile("Error: (-?\\d+) Str: (WT[_[A-Z]+: )?(.+)")
 var numActorsRe = regexp.MustCompile("Actors: (\\d+)")
-var wtErrStrRe = regexp.MustCompile("\\[1\\d{9}:\\d{6}.*?(WT_.*)")
+var wtErrStrRe = regexp.MustCompile("\\[1\\d{9}:\\d{0,6}.*?(WT_.*)")
 
 type Table struct {
 	Actors     []string
@@ -52,7 +53,7 @@ func (table *Table) Output() {
 		var act string
 		switch {
 		// Basic, no error, no output
-		case recombined.errCode == 0 && recombined.val == -2:
+		case recombined.errCode == 0 && recombined.val == -2 && recombined.errCode == 0 && recombined.wtErrStr == "":
 			act = recombined.line
 		case recombined.errCode == 0 && recombined.val == -1:
 			act = fmt.Sprintf("%v (WT_NOTFOUND)", recombined.line)
@@ -165,8 +166,12 @@ func ParseOutput(reader io.Reader) error {
 			if err != nil {
 				panic(err)
 			}
-			recombined.errStr = matches[2]
-			recombined.wtErrStr = matches[3]
+			recombined.errStr = strings.TrimSpace(matches[2])
+			if len(matches[3]) == 0 {
+				recombined.wtErrStr = matches[3]
+			} else {
+				recombined.errStr = matches[3]
+			}
 		} else if matches := numActorsRe.FindStringSubmatch(line); len(matches) > 0 {
 			var numActors int
 			numActors, err = strconv.Atoi(matches[1])

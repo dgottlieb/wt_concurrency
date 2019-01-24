@@ -306,15 +306,15 @@ func (read Read) CanError() []int {
 	return []int{0}
 }
 
-type Timestamp struct {
+type TimestampTxn struct {
 	Actor
 	Read   int
 	Commit int
 }
 
-func ParseTimestamp(actor *Actor, item string) Timestamp {
+func ParseTimestamp(actor *Actor, item string) TimestampTxn {
 	options := KeyValues(item)
-	ret := Timestamp{Actor: *actor}
+	ret := TimestampTxn{Actor: *actor}
 	var err error
 	if val, exists := options["commit"]; exists {
 		ret.Commit, err = strconv.Atoi(val)
@@ -332,7 +332,7 @@ func ParseTimestamp(actor *Actor, item string) Timestamp {
 	return ret
 }
 
-func (timestamp Timestamp) Do() []string {
+func (timestamp TimestampTxn) Do() []string {
 	ret := make([]string, 0)
 	if timestamp.Read > 0 {
 		ret = append(ret,
@@ -344,7 +344,7 @@ func (timestamp Timestamp) Do() []string {
 	return ret
 }
 
-func (timestamp Timestamp) CanError() []int {
+func (timestamp TimestampTxn) CanError() []int {
 	ret := make([]int, 0)
 	for idx, _ := range timestamp.Do() {
 		ret = append(ret, idx)
