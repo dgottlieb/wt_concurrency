@@ -1,0 +1,13 @@
+| Writer                             |
+|------------------------------------|
+| Alter :assertCommit key_consistent |
+|                                    |
+| Begin                              |
+| Write A 1                          |
+| Timestamp :commit 10               |
+| Commit                             |
+|                                    |
+| Begin                              |
+| Write A 2                          |
+| Timestamp :commit 5                |
+| Commit                             |

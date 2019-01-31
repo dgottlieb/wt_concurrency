@@ -16,11 +16,18 @@ type Program []Instance
 type Instance struct {
 	TableName string
 	Actors    []Actor
-	Sequence  []*WrappedOp
+	// Preamble contains operations that must happen before cursors are opened. Notably, alter
+	// table calls.
+	Preamble []*WrappedOp
+	Sequence []*WrappedOp
 }
 
 func (instance *Instance) NextOp(op *WrappedOp) {
-	instance.Sequence = append(instance.Sequence, op)
+	if op.Preamble_able() && len(instance.Sequence) == 0 {
+		instance.Preamble = append(instance.Preamble, op)
+	} else {
+		instance.Sequence = append(instance.Sequence, op)
+	}
 }
 
 func contains(canError []int, stmtIdx int) bool {
@@ -61,12 +68,10 @@ func (instance *Instance) Compile(filename string) {
 	for _, actor := range instance.Actors {
 		fmt.Fprintf(file, "\tWtSession %s = conn.getSession();\n", actor.SessionName())
 		fmt.Fprintf(file, "\tstd::cout << \"%v\" << std::endl;\n", actor.Name)
-		fmt.Fprintf(file, "\tWtCursor %s = %s.openCursor(tableUri);", actor.CursorName(), actor.SessionName())
 	}
 	fmt.Fprintln(file)
 
-	for idx, _ := range instance.Sequence {
-		row := instance.Sequence[idx]
+	processOp := func(row *WrappedOp) {
 		fmt.Fprintf(file, "\tstd::cout << \"Line: %v\" << std::endl;\n", row.Raw)
 		fmt.Fprintf(file, "\tstd::cout << \"Idx: %v\" << std::endl;\n", row.ActorIdx)
 		fmt.Fprintf(file, "\tstd::cout << \"HasOutput: %v\" << std::endl;\n", row.HasOutput)
@@ -89,6 +94,21 @@ func (instance *Instance) Compile(filename string) {
 				fmt.Fprintf(file, "\t%s\n", line)
 			}
 		}
+	}
+
+	for idx, _ := range instance.Preamble {
+		processOp(instance.Preamble[idx])
+	}
+	fmt.Fprintln(file)
+
+	for _, actor := range instance.Actors {
+		fmt.Fprintf(file, "\tWtCursor %s = %s.openCursor(tableUri);", actor.CursorName(), actor.SessionName())
+	}
+	fmt.Fprintln(file)
+
+	for idx, _ := range instance.Sequence {
+		processOp(instance.Sequence[idx])
+		fmt.Fprintln(file)
 	}
 	fmt.Fprintln(file, "}")
 }
@@ -132,6 +152,17 @@ type WrappedOp struct {
 	Raw       string
 	ActorIdx  int
 	HasOutput bool
+}
+
+func (wrappedOp *WrappedOp) Preamble_able() bool {
+	switch wrappedOp.Operation.(type) {
+	case NoOp:
+		return true
+	case Alter:
+		return true
+	default:
+		return false
+	}
 }
 
 var kvRe = regexp.MustCompile(":(\\w+) (\\w+)")
@@ -367,13 +398,14 @@ var FALSE bool = false
 
 type Alter struct {
 	Actor
-	TableName string
-	Logging   *bool
+	TableName    string
+	Logging      *bool
+	AssertCommit string
 }
 
 func ParseAlter(instance *Instance, actor *Actor, item string) Alter {
 	options := KeyValues(item)
-	ret := Alter{Actor: *actor}
+	ret := Alter{Actor: *actor, AssertCommit: "none"}
 	if val, exists := options["logging"]; exists {
 		switch val {
 		case "on":
@@ -383,6 +415,17 @@ func ParseAlter(instance *Instance, actor *Actor, item string) Alter {
 		default:
 			panic(fmt.Sprintf("Unknown logging setting. Must be <on|off>. Val: %v", val))
 		}
+	}
+	if val, exists := options["assertCommit"]; exists {
+		switch val {
+		case "always":
+		case "never":
+		case "none":
+		case "key_consistent":
+		default:
+			panic(fmt.Sprintf("Unknown assert commit setting. Must be <always|never|none|key_consistent>. Val: %v", val))
+		}
+		ret.AssertCommit = val
 	}
 	if ret.TableName == "" {
 		ret.TableName = instance.TableName
@@ -396,11 +439,15 @@ func (alter Alter) Do() []string {
 	if alter.Logging != nil {
 		ret = append(ret, fmt.Sprintf("%v.alterTableLogging(%v, %v);", alter.SessionName(), alter.TableName, *alter.Logging))
 	}
+	ret = append(ret, fmt.Sprintf("%v.alterTableRequireCommitTimestamps(%v, \"%v\");", alter.SessionName(), alter.TableName, alter.AssertCommit))
 
 	return ret
 }
 
 func (alter Alter) CanError() []int {
+	if alter.Logging != nil {
+		return []int{0, 1}
+	}
 	return []int{0}
 }
 
@@ -578,6 +625,9 @@ func ParseOp(instance *Instance, actors []Actor, line string) *WrappedOp {
 		case item == "Rollback":
 			op = RollbackTxn{actors[idx]}
 		case strings.HasPrefix(item, "Alter"):
+			if len(instance.Sequence) > 0 {
+				panic("Alter must come before any non-alter lines.")
+			}
 			op = ParseAlter(instance, &actors[idx], item)
 		case strings.HasPrefix(item, "GlobalTimestamp"):
 			op = ParseGlobalTimestamp(instance, item)

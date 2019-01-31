@@ -59,9 +59,11 @@ func (table *Table) Output() {
 			act = fmt.Sprintf("%v (WT_NOTFOUND)", recombined.line)
 		case recombined.errCode == 0 && recombined.val >= 0:
 			act = fmt.Sprintf("%v (%v)", recombined.line, recombined.val)
-		case recombined.errCode != 0:
+		case recombined.errCode != 0 && len(recombined.wtErrStr) > 0:
 			act = fmt.Sprintf("%v (%v %v) [%d]", recombined.line, recombined.errCode, recombined.errStr, len(table.Footnotes)+1)
 			table.Footnotes = append(table.Footnotes, recombined.wtErrStr)
+		case recombined.errCode != 0 && len(recombined.wtErrStr) == 0:
+			act = fmt.Sprintf("%v (%v %v)", recombined.line, recombined.errCode, recombined.errStr)
 		default:
 			panic(fmt.Sprintf("Unknown case. Rec: %+v", *recombined))
 		}
@@ -145,22 +147,17 @@ func ParseOutput(reader io.Reader) error {
 				table.Recombined = append(table.Recombined, recombined)
 			}
 			recombined = NewRecombined(matches[1])
-			continue
-
 		} else if matches := actorIdxRe.FindStringSubmatch(line); len(matches) > 0 {
 			recombined.actorIdx, err = strconv.Atoi(matches[1])
 			if err != nil {
 				panic(err)
 			}
-			continue
 		} else if matches := hasOutputRe.FindStringSubmatch(line); len(matches) > 0 {
-			continue
 		} else if matches := valRe.FindStringSubmatch(line); len(matches) > 0 {
 			recombined.val, err = strconv.Atoi(matches[1])
 			if err != nil {
 				panic(err)
 			}
-			continue
 		} else if matches := errorRe.FindStringSubmatch(line); len(matches) > 0 {
 			recombined.errCode, err = strconv.Atoi(matches[1])
 			if err != nil {
