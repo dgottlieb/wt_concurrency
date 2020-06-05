@@ -276,6 +276,17 @@ func (rollback RollbackTxn) CanError() []int {
 	return []int{0}
 }
 
+type RollbackToStable struct {
+}
+
+func (rts RollbackToStable) Do() []string {
+	return []string{"conn.rollbackToStable();"}
+}
+
+func (rts RollbackToStable) CanError() []int {
+	return []int{0}
+}
+
 type Write struct {
 	Actor
 	Key   int
@@ -494,16 +505,23 @@ func ParseGlobalTimestamp(instance *Instance, item string) GlobalTimestamp {
 func (global GlobalTimestamp) Do() []string {
 	ret := make([]string, 0)
 	if global.Stable > 0 {
-		ret = append(ret, fmt.Sprintf("conn.setStableTimestamp(%d);", global.Stable))
+		if global.Force {
+			ret = append(ret, fmt.Sprintf("conn.setStableTimestamp(%d, true);", global.Stable))
+		} else {
+			ret = append(ret, fmt.Sprintf("conn.setStableTimestamp(%d);", global.Stable))
+		}
 	}
 	if global.Oldest > 0 {
+		if global.Force {
+			panic("Working with force=true is not yet supported on oldest_timestamp.")
+		}
 		ret = append(ret, fmt.Sprintf("conn.setOldestTimestamp(%d);", global.Oldest))
 	}
 	if global.Commit > 0 {
+		if global.Force {
+			panic("Working with force=true is not yet supported on all_committed.")
+		}
 		panic("Resetting the all_committed time is not yet supported.")
-	}
-	if global.Force {
-		panic("Working with force=true is not yet supported.")
 	}
 
 	return ret
@@ -635,6 +653,8 @@ func ParseOp(instance *Instance, actors []Actor, line string) *WrappedOp {
 			op = ParseCheckpoint(&actors[idx], item)
 		case strings.HasPrefix(item, "Prepare"):
 			op = ParsePrepare(&actors[idx], item)
+		case strings.HasPrefix(item, "RollbackToStable"):
+			op = RollbackToStable{}
 		default:
 			panic(fmt.Sprintf("Unknown command. Line: %s", item))
 		}

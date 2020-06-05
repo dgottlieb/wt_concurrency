@@ -392,14 +392,25 @@ public:
         return session->checkpoint(session.get(), "use_timestamp=false");
     }
 
-    int setStableTimestamp(std::uint64_t stableTimestamp) {
-        char stableTSConfigString[17 /* "stable_timestamp= */ +
-                                  (8 * 2) /* 16 hexadecimal digits */ + 1 /* trailing null */];
-        auto size = std::snprintf(stableTSConfigString,
-                                  sizeof(stableTSConfigString),
-                                  "stable_timestamp=%llx",
-                                  static_cast<unsigned long long>(stableTimestamp));
-        return _conn->set_timestamp(_conn, stableTSConfigString);
+    int setStableTimestamp(std::uint64_t stableTimestamp, bool force = false) {
+        if (force) {
+            char stableTSConfigString[17 /* "stable_timestamp= */ +
+                                      (8 * 2) /* 16 hexadecimal digits */ + 11 /* ",force=true" */ +
+                                      1 /* trailing null */];
+            auto size = std::snprintf(stableTSConfigString,
+                                      sizeof(stableTSConfigString),
+                                      "stable_timestamp=%llx,force=true",
+                                      static_cast<unsigned long long>(stableTimestamp));
+            return _conn->set_timestamp(_conn, stableTSConfigString);
+        } else {
+            char stableTSConfigString[17 /* "stable_timestamp= */ +
+                                      (8 * 2) /* 16 hexadecimal digits */ + 1 /* trailing null */];
+            auto size = std::snprintf(stableTSConfigString,
+                                      sizeof(stableTSConfigString),
+                                      "stable_timestamp=%llx",
+                                      static_cast<unsigned long long>(stableTimestamp));
+            return _conn->set_timestamp(_conn, stableTSConfigString);
+        }
     }
 
     int setOldestTimestamp(std::uint64_t oldestTimestamp) {
