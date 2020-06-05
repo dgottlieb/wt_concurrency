@@ -1,0 +1,9 @@
+| Writer                     |
+|----------------------------|
+| Alter :logging off         |
+| GlobalTimestamp :stable 10 |
+| Begin                      |
+| Write A 1                  |
+| Prepare :prepareAt 20      |
+| Commit :commitAt 30        |
+| Checkpoint :stable true    |

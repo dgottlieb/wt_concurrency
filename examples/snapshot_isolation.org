@@ -1,0 +1,24 @@
+| Writer 1   | Writer 2   | Reader |
+|------------+------------+--------|
+| Begin      |            |        |
+| Write A 10 |            |        |
+| Read C     |            |        |
+| Write C 1  |            |        |
+|            | Begin      |        |
+|            | Write B 20 |        |
+|            | Read C     |        |
+|            | Write C 1  |        |
+|            | Rollback   |        |
+|            |            |        |
+|            |            |        |
+| Commit     |            |        |
+|            | Begin      |        |
+|            | Write B 20 |        |
+|            | Read C     |        |
+|            | Write C 2  |        |
+|            | Commit     |        |
+|            |            | Begin  |
+|            |            | Read A |
+|            |            | Read B |
+|            |            | Read C |
+|            |            |        |

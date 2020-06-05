@@ -1,0 +1,11 @@
+| Writer               | Setter                     | Reader               |
+|----------------------+----------------------------+----------------------|
+| Begin                |                            |                      |
+| Write A 1            |                            |                      |
+| Timestamp :commit 10 |                            |                      |
+|                      | GlobalTimestamp :oldest 20 |                      |
+| Commit               |                            |                      |
+|                      |                            | Begin                |
+|                      |                            | Timestamp :read 15   |
+|                      |                            | Read A               |
+|                      |                            | Commit               |

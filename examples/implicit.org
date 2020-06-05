@@ -1,0 +1,25 @@
+| Implicit Reader            | Explicit Reader           | Writer    |
+|----------------------------+---------------------------+-----------|
+| Begin :isolation snapshot  |                           |           |
+| Read A                     |                           |           |
+| Commit                     |                           |           |
+|                            |                           | Begin     |
+|                            |                           | Write A 1 |
+|                            |                           | Commit    |
+|                            | Begin :isolation snapshot |           |
+|                            | Read A                    |           |
+| Read A                     |                           |           |
+|                            |                           | Begin     |
+|                            |                           | Write A 2 |
+|                            |                           | Write B 1 |
+|                            |                           | Commit    |
+| Read A                     |                           |           |
+| Read A                     |                           |           |
+| Read B                     |                           |           |
+| Read A                     |                           |           |
+|                            | Read A                    |           |
+|                            | Read B                    |           |
+|                            | Read A                    |           |
+|                            | Rollback                  |           |
+|                            | Read A                    |           |
+|                            | Read B                    |           |

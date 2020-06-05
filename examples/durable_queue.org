@@ -1,0 +1,17 @@
+| Writer 1             | Writer 2             |
+|----------------------+----------------------|
+| Begin                |                      |
+| Write A 1            |                      |
+| Timestamp :commit 1  |                      |
+| Commit               |                      |
+|                      | Begin                |
+|                      | Read A               |
+|                      | Commit               |
+| Begin                |                      |
+| Timestamp :commit 20 |                      |
+|                      | Begin                |
+|                      | Write A 2            |
+|                      | Timestamp :commit 30 |
+|                      | Commit               |
+| Write B 1            |                      |
+| Commit               |                      |

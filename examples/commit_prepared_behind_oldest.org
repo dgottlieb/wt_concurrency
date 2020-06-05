@@ -1,0 +1,20 @@
+| Oldest Manager             | Writer            | Reader Old Version | Reader New Version |
+|----------------------------+-------------------+--------------------+--------------------|
+| GlobalTimestamp :oldest 10 |                   |                    |                    |
+|                            | Begin             |                    |                    |
+|                            | Write X 1         |                    |                    |
+|                            | Commit            |                    |                    |
+|                            |                   |                    |                    |
+|                            | Begin             |                    |                    |
+|                            | Write X 2         |                    |                    |
+|                            | Prepare 10        |                    |                    |
+|                            |                   | Begin              |                    |
+|                            |                   | Timestamp :read 15 |                    |
+|                            |                   | Read X             |                    |
+|                            |                   |                    | Begin              |
+|                            |                   |                    | Timestamp :read 25 |
+|                            |                   |                    | Read X             |
+| GlobalTimestamp :oldest 30 |                   |                    |                    |
+|                            | Commit :commit 20 |                    |                    |
+|                            |                   | Read X             |                    |
+|                            |                   |                    | Read X             |

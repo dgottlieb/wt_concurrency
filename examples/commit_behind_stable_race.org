@@ -1,0 +1,16 @@
+| Writer               | Global                     |
+|----------------------+----------------------------|
+|                      | GlobalTimestamp :stable 10 |
+| Begin                |                            |
+| Write A 10           |                            |
+| Timestamp :commit 20 |                            |
+|                      | GlobalTimestamp :stable 30 |
+| Commit               |                            |
+|                      |                            |
+| Begin :readAt 10     |                            |
+| Read A               |                            |
+| Rollback             |                            |
+|                      |                            |
+| Begin :readAt 25     |                            |
+| Read A               |                            |
+| Rollback             |                            |

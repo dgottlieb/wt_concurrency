@@ -1,0 +1,18 @@
+| Writer              |
+|---------------------|
+| Begin               |
+| Timestamp :read 10  |
+| Timestamp :commit 5 |
+| Write A 1           |
+| Read A              |
+| Commit              |
+|                     |
+| Begin               |
+| Timestamp :read 4   |
+| Read A              |
+| Commit              |
+|                     |
+| Begin               |
+| Timestamp: read 7   |
+| Read A              |
+| Commit              |

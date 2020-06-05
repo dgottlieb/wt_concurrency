@@ -1,0 +1,18 @@
+| Writer                                 |
+|----------------------------------------|
+| Begin                                  |
+| Write A 1                              |
+| Commit :commit 10                      |
+| Begin                                  |
+| Write A 2                              |
+| Commit :commit 20                      |
+|                                        |
+| GlobalTimestamp :stable 30             |
+| Checkpoint                             |
+| GlobalTimestamp :stable 15 :force true |
+| RollbackToStable                       |
+| Begin :readAt 10                       |
+| Read A                                 |
+| Rollback                               |
+| Begin :readAt 20                       |
+| Read A                                 |

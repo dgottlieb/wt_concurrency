@@ -1,0 +1,12 @@
+| Oplog Applier        | Oplog Manager                 | Oplog Reader              |
+|----------------------+-------------------------------+---------------------------|
+| Begin                |                               |                           |
+| Write Oplog 10       |                               |                           |
+| Timestamp :commit 10 |                               |                           |
+| Commit               |                               |                           |
+|                      | Update oplog visibility to 10 |                           |
+|                      |                               | Begin :isolation snapshot |
+|                      |                               | Timestamp :readAt 10      |
+| Begin                |                               |                           |
+| Write A 1            |                               |                           |
+| Prepare 10           |                               |                           |
