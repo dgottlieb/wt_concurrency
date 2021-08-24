@@ -1,0 +1,13 @@
+| Writer 1   | Writer 2   |
+|------------+------------|
+| Begin      |            |
+| Write A 10 |            |
+| Commit     |            |
+|            |            |
+| Begin      |            |
+| Read A     |            |
+| Write A 10 |            |
+|            | Begin      |
+|            | Read A     |
+|            | Write A 10 |
+| Commit     |            |

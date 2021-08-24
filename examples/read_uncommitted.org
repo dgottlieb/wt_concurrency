@@ -1,0 +1,19 @@
+| Writer 1                          | Writer 2                          |
+|-----------------------------------+-----------------------------------|
+| Begin                             |                                   |
+| Write A 1                         |                                   |
+| Commit                            |                                   |
+| Begin :isolation read_uncommitted |                                   |
+| Read A                            |                                   |
+| Write A 2                         |                                   |
+|-----------------------------------+-----------------------------------|
+|                                   | Begin :isolation read_uncommitted |
+|                                   | Read A                            |
+|                                   | Write A 3                         |
+|-----------------------------------+-----------------------------------|
+| Read A                            |                                   |
+|                                   | Commit                            |
+| Commit                            |                                   |
+|                                   | Begin                             |
+|                                   | Read A                            |
+|                                   |                                   |

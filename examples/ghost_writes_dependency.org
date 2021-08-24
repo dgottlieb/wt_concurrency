@@ -1,0 +1,14 @@
+| Writer                                    | Stabler                    |
+|-------------------------------------------+----------------------------|
+| Begin                                     |                            |
+| Drain one/last sidetable write into index |                            |
+| Timestamp :commit 10                      |                            |
+|                                           | GlobalTimestamp :stable 20 |
+|                                           | Checkpoint ???             |
+| Commit                                    | Checkpoint ???             |
+|                                           | Checkpoint ???             |
+| Begin                                     | Checkpoint ???             |
+| Catalog write representing drain complete | Checkpoint ???             |
+| Timestamp :commit 20                      | Checkpoint ???             |
+| Commit                                    | Checkpoint ???             |
+|                                           | Checkpoint ???             |

@@ -1,0 +1,12 @@
+| Writer1             | Writer2              | All Committed Reader |
+|---------------------+----------------------+----------------------|
+| Begin               |                      |                      |
+| Generate 5          |                      |                      |
+|                     | Begin                |                      |
+|                     | Generate 10          |                      |
+|                     | Timestamp :commit 10 |                      |
+|                     | Commit               |                      |
+|                     |                      | No Holes -> 10       |
+| Timestamp :commit 5 |                      |                      |
+|                     |                      | No holes -> 5        |
+| Commit              |                      |                      |

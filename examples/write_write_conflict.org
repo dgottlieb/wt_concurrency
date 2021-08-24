@@ -1,0 +1,13 @@
+| T1        | T2        |
+|-----------+-----------|
+| Begin     |           |
+|           | Begin     |
+|           | Read D    |
+|           | Write D 2 |
+| Read X    |           |
+| Read Y    |           |
+| Read Z    |           |
+| Write D 1 |           |
+|           | Rollback  |
+|           | Begin     |
+|           | Read D    |

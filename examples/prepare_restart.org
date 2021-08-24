@@ -1,0 +1,9 @@
+| Writer              | Stabler                    |
+|---------------------+----------------------------|
+| Begin               |                            |
+| Write A 1           |                            |
+| Commit :timestamp 5 |                            |
+| Begin               |                            |
+| Write A 10          |                            |
+| Prepare 10          |                            |
+|                     | GlobalTimestamp :stable 20 |

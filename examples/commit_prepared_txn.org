@@ -1,0 +1,19 @@
+| Hole                     | Client OpCtx                                     | Oplog OpCtx              | all_durable/stable |
+|--------------------------+--------------------------------------------------+--------------------------+--------------------|
+|                          | BeginTxn                                         |                          |                    |
+|                          | Write A 1                                        |                          |                    |
+|                          | <start prepare>                                  | BeginTxn                 |                    |
+|                          |                                                  | SetTimestamp :durable 10 |                  9 |
+|                          |                                                  | Write Prepare Oplog(A)   |                    |
+|                          | Prepare 10                                       |                          |                    |
+|                          | <wait for commit instruction>                    | Commit                   |                 10 |
+|                          |                                                  |                          |                    |
+|                          | <starting commit. visible at 20, durable at 30>  |                          |                    |
+| BeginTxn                 |                                                  |                          |                    |
+| SetTimestamp :durable 30 |                                                  |                          |                 29 |
+|                          | Commit :commit_timestamp=20,durable_timestamp=30 |                          |                    |
+|                          |                                                  | BeginTxn                 |                    |
+|                          |                                                  | SetTimestamp :durable 30 |                    |
+|                          |                                                  | Write Commit Oplog(A)    |                    |
+|                          |                                                  | Commit                   |                    |
+| Rollback                 |                                                  |                          |                 30 |

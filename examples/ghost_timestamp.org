@@ -1,0 +1,29 @@
+| Writer               | Reader           |
+|----------------------+------------------|
+| Begin                |                  |
+| Write A 10           |                  |
+| Timestamp :commit 10 |                  |
+| Commit               |                  |
+|                      |                  |
+| Begin                |                  |
+| Write A 20           |                  |
+| Timestamp :commit 40 |                  |
+| Commit               |                  |
+|                      |                  |
+| Begin                |                  |
+| Write A 30           |                  |
+| Timestamp :commit 30 |                  |
+| Commit               |                  |
+|                      | Begin :readAt 15 |
+|                      | Read A           |
+|                      | Commit           |
+|                      | Begin :readAt 25 |
+|                      | Read A           |
+|                      | Commit           |
+|                      | Begin :readAt 35 |
+|                      | Read A           |
+|                      | Commit           |
+|                      | Begin :readAt 45 |
+|                      | Read A           |
+|                      | Commit           |
+|                      |                  |
