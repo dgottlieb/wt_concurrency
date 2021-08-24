@@ -610,6 +610,8 @@ func ParseAndNormalize(line string) []string {
 	return ret
 }
 
+var separatorLineRe = regexp.MustCompile("-+\\+-+")
+
 func ParseOp(instance *Instance, actors []Actor, line string) *WrappedOp {
 	items := ParseAndNormalize(line)
 
@@ -620,7 +622,7 @@ func ParseOp(instance *Instance, actors []Actor, line string) *WrappedOp {
 	var raw string
 	for idx, item := range items {
 		item = strings.TrimSpace(item)
-		if len(item) == 0 {
+		if len(item) == 0 || separatorLineRe.MatchString(item) {
 			continue
 		}
 
