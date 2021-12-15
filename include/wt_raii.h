@@ -428,9 +428,9 @@ public:
     }
 
 
-    uint64_t queryCommittedTimestamp() {
+    uint64_t queryAllDurableTimestamp() {
         char buf[(2 * 8 /*bytes in hex*/) + 1 /*nul terminator*/];
-        invariantWTOKEasy(_conn->query_timestamp(_conn, buf, "get=all_committed"));
+        invariantWTOKEasy(_conn->query_timestamp(_conn, buf, "get=all_durable"));
 
         return static_cast<uint64_t>(strtol(buf, nullptr, 16));
     }

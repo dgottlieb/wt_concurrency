@@ -536,6 +536,19 @@ func (global GlobalTimestamp) CanError() []int {
 	return ret
 }
 
+type QueryTimestamp struct {
+	// Assumed to be querying all_durable
+	// AllDurable bool
+}
+
+func (queryTs QueryTimestamp) Do() []string {
+	return []string{"conn.queryAllDurableTimestamp();"}
+}
+
+func (queryTs QueryTimestamp) CanError() []int {
+	return []int{0}
+}
+
 type Checkpoint struct {
 	Actor
 	Stable bool
@@ -655,6 +668,9 @@ func ParseOp(instance *Instance, actors []Actor, line string) *WrappedOp {
 			op = ParsePrepare(&actors[idx], item)
 		case strings.HasPrefix(item, "RollbackToStable"):
 			op = RollbackToStable{}
+		case strings.HasPrefix(item, "QueryTimestamp"):
+			op = QueryTimestamp{}
+			hasOutput = true
 		default:
 			panic(fmt.Sprintf("Unknown command. Line: %s", item))
 		}
