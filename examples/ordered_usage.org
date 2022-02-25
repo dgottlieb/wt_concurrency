@@ -1,0 +1,9 @@
+| Writer 1                      |
+|-------------------------------|
+| BeginTxn                      |
+| Write A 1                     |
+| Prepare 10                    |
+| Commit :commit 10 :durable 20 |
+| BeginTxn                      |
+| Write A 2                     |
+| Commit :commit 15             |

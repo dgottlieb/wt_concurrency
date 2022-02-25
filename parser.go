@@ -233,7 +233,8 @@ func (beginTxn BeginTxn) CanError() []int {
 
 type CommitTxn struct {
 	Actor
-	CommitTimestamp uint64
+	CommitTimestamp  uint64
+	DurableTimestamp uint64
 }
 
 func ParseCommitTxn(actor *Actor, item string) CommitTxn {
@@ -246,14 +247,26 @@ func ParseCommitTxn(actor *Actor, item string) CommitTxn {
 			panic(err)
 		}
 	}
+	if value, exists := options["durable"]; exists {
+		var err error
+		ret.DurableTimestamp, err = strconv.ParseUint(value, 10, 64)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	return ret
 }
 
 func (commitTxn CommitTxn) Do() []string {
-	if commitTxn.CommitTimestamp > 0 {
+	if commitTxn.CommitTimestamp > 0 && commitTxn.DurableTimestamp == 0 {
 		return []string{
 			fmt.Sprintf("%s.commit(%d);", commitTxn.SessionName(), commitTxn.CommitTimestamp),
+		}
+	}
+	if commitTxn.DurableTimestamp > 0 {
+		return []string{
+			fmt.Sprintf("%s.commitPrepared(%d, %d);", commitTxn.SessionName(), commitTxn.CommitTimestamp, commitTxn.DurableTimestamp),
 		}
 	}
 
