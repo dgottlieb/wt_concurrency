@@ -1,0 +1,12 @@
+| Writer                      |
+|-----------------------------|
+| Begin                       |
+| Write A 1                   |
+| Timestamp :commit 5         |
+| Commit                      |
+| QueryTimestamp :all_durable |
+|                             |
+| Begin                       |
+| Timestamp :commit 10        |
+| Commit                      |
+| QueryTimestamp :all_durable |
