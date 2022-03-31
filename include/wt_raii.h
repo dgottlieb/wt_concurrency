@@ -188,8 +188,8 @@ public:
 
     int createTable(std::string uri, std::string conf = "") {
         std::stringstream ss;
-        ss << "key_format=q,value_format=q,log=(enabled=false)," << conf;
-        // ss << "key_format=q,value_format=q,log=(enabled=false),write_timestamp_usage=ordered,assert=(write_timestamp=on),verbose=[write_timestamp]," << conf;
+        // ss << "key_format=q,value_format=q,log=(enabled=false)," << conf;
+        ss << "key_format=q,value_format=q,log=(enabled=false),write_timestamp_usage=ordered,assert=(write_timestamp=on),verbose=[write_timestamp]," << conf;
         return _session->create(_session, uri.c_str(), ss.str().c_str());
     }
 
@@ -303,6 +303,13 @@ public:
     int setTimestamp(int time) {
         std::stringstream ss;
         ss << "commit_timestamp=" << std::hex << time;
+        const std::string conf = ss.str();
+        return _session->timestamp_transaction(_session, conf.c_str());
+    }
+
+    int setDurableTimestamp(int time) {
+        std::stringstream ss;
+        ss << "durable_timestamp=" << std::hex << time;
         const std::string conf = ss.str();
         return _session->timestamp_transaction(_session, conf.c_str());
     }

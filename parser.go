@@ -332,6 +332,32 @@ func (write Write) CanError() []int {
 	return []int{0}
 }
 
+type Delete struct {
+	Actor
+	Key int
+}
+
+var deleteRe = regexp.MustCompile("Delete (\\w)")
+
+func ParseDelete(actor *Actor, item string) Write {
+	// options := KeyValues(item)
+	ret := Write{Actor: *actor}
+	matches := deleteRe.FindStringSubmatch(item)
+	ret.Key = int(matches[1][0] - byte('A'))
+
+	return ret
+}
+
+func (delete Delete) Do() []string {
+	return []string{
+		fmt.Sprintf("\t%s.remove(%d);", delete.CursorName(), delete.Key),
+	}
+}
+
+func (delete Delete) CanError() []int {
+	return []int{0}
+}
+
 type Read struct {
 	Actor
 	Key int
@@ -363,14 +389,21 @@ func (read Read) CanError() []int {
 
 type TimestampTxn struct {
 	Actor
-	Read   int
-	Commit int
+	Read    int
+	Commit  int
+	Durable int
 }
 
 func ParseTimestamp(actor *Actor, item string) TimestampTxn {
 	options := KeyValues(item)
 	ret := TimestampTxn{Actor: *actor}
 	var err error
+	if val, exists := options["durable"]; exists {
+		ret.Durable, err = strconv.Atoi(val)
+		if err != nil {
+			panic(err)
+		}
+	}
 	if val, exists := options["commit"]; exists {
 		ret.Commit, err = strconv.Atoi(val)
 		if err != nil {
@@ -395,6 +428,9 @@ func (timestamp TimestampTxn) Do() []string {
 	}
 	if timestamp.Commit > 0 {
 		ret = append(ret, fmt.Sprintf("%s.setTimestamp(%d);", timestamp.SessionName(), timestamp.Commit))
+	}
+	if timestamp.Durable > 0 {
+		ret = append(ret, fmt.Sprintf("%s.setDurableTimestamp(%d);", timestamp.SessionName(), timestamp.Durable))
 	}
 	return ret
 }
@@ -666,6 +702,8 @@ func ParseOp(instance *Instance, actors []Actor, line string) *WrappedOp {
 		case strings.HasPrefix(item, "Read"):
 			op = ParseRead(&actors[idx], item)
 			hasOutput = true
+		case strings.HasPrefix(item, "Delete"):
+			op = ParseDelete(&actors[idx], item)
 		case strings.HasPrefix(item, "Timestamp"):
 			op = ParseTimestamp(&actors[idx], item)
 		case item == "Rollback":

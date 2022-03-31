@@ -1,0 +1,25 @@
+| Writer                    |
+|---------------------------|
+| Begin                     |
+| Write A 1                 |
+| Timestamp :commit 1       |
+| Timestamp :durable 2      |
+| Rollback                  |
+|                           |
+| Begin                     |
+| Write A 1                 |
+| Prepare 1                 |
+| Timestamp :commit 1       |
+| Timestamp :durable 2      |
+| Commit                    |
+|                           |
+| Begin :readAt 1           |
+| Read A                    |
+| Rollback                  |
+|                           |
+| GlobalTimestamp :stable 1 |
+| RollbackToStable          |
+|                           |
+| Begin :readAt 1           |
+| Read A                    |
+| Rollback                  |
